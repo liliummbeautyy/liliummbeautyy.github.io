@@ -60,12 +60,13 @@ function designsView(){
  if(!CAT.designs.length)return card('','',`<div class="empty"><div class="empty-stamps">${stamp('lirios','',-6)}${stamp('flores','',5)}</div><p class="empty-title">Tu catálogo está vacío</p><p class="muted">Sube un diseño con su nombre y precio, o simplemente fotos de tus trabajos al álbum, sin nombre ni precio.</p><div class="empty-btns"><button class="btn" onclick="openDesign()">${ic('plus')}Nuevo diseño</button><label class="btn soft">${ic('photo')}Subir fotos al álbum<input type="file" accept="image/*" multiple hidden onchange="quickAlbum(this)"></label></div></div>`);
  const saleHtml=sale.length?`<div class="design-grid">${sale.map(d=>`<article class="design-card ${d.visible?'':'is-hidden'}">
   <button class="dc-photo" onclick="openDesign('${d.id}')" aria-label="Editar ${esc(d.name)}">${d.photos?.[0]?`<img src="${esc(catPhotoUrl(d.photos[0]))}" alt="" loading="lazy">`:`<span class="dc-nophoto">${ic('camera')}<small>Sin foto</small></span>`}${d.photos?.length>1?`<em class="dc-count">${d.photos.length} fotos</em>`:''}${d.visible?'':`<em class="dc-hidden">${ic('eyeoff')}Oculto</em>`}</button>
-  <div class="dc-body"><div class="dc-title"><b>${esc(d.name)}</b><button class="icon-btn" aria-label="Opciones" onclick="designMenu(event,'${d.id}')">${ic('more')}</button></div>
+  <div class="dc-body"><div class="dc-title"><b class="${d.name?'':'muted'}">${esc(d.name||'Sin nombre')}</b><button class="icon-btn" aria-label="Opciones" onclick="designMenu(event,'${d.id}')">${ic('more')}</button></div>
    <small class="muted">${esc([d.category,d.shape,d.length].filter(Boolean).join(' · ')||'Sin categoría')}</small>
    <label class="price-edit" title="Cambia el precio y pulsa Intro"><span>${d.price_from?'Desde':'Precio'}</span><input type="number" min="0" step="0.5" inputmode="decimal" value="${d.price??''}" placeholder="—" onchange="quickPrice('${d.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()" aria-label="Precio de ${esc(d.name)}"><em>€</em></label>
+   <label class="toggle mini"><span>A la venta</span><input type="checkbox" checked onchange="setDesignSale('${d.id}',this.checked)"><i></i></label>
    <label class="toggle mini"><span>Visible en la web</span><input type="checkbox" ${d.visible?'checked':''} onchange="setDesignVisible('${d.id}',this.checked)"><i></i></label>
   </div></article>`).join('')}</div>`:`<p class="muted pad">Aún no tienes diseños a la venta. Pulsa «Nuevo diseño» para añadir uno con nombre y precio.</p>`;
- const albumHtml=`<section class="album-admin card"><header class="aa-head"><div><h3>${ic('photo')}Álbum <span class="cnt">${album.length}</span></h3><p class="muted small">Fotos de tus trabajos, sin nombre ni precio. En la web, tus clientas pueden pulsar «Quiero uno así».</p></div><label class="btn soft small">${ic('plus')}Subir fotos<input type="file" accept="image/*" multiple hidden onchange="quickAlbum(this)"></label></header>
+ const albumHtml=`<section class="album-admin card"><header class="aa-head"><div><h3>${ic('photo')}Solo para enseñar <span class="cnt">${album.length}</span></h3><p class="muted small">Tus trabajos que no están a la venta. En la web salen en «Mi álbum» y tus clientas pueden pulsar «Quiero uno así». Ponlos a la venta cuando quieras desde ⋯.</p></div><label class="btn soft small">${ic('plus')}Subir fotos<input type="file" accept="image/*" multiple hidden onchange="quickAlbum(this)"></label></header>
   ${album.length?`<div class="album-grid">${album.map(d=>`<figure class="${d.visible?'':'is-hidden'}"><button class="ag-photo" onclick="openDesign('${d.id}')" aria-label="Editar foto del álbum">${d.photos?.[0]?`<img src="${esc(catPhotoUrl(d.photos[0]))}" alt="" loading="lazy">`:''}${d.visible?'':`<em class="dc-hidden">${ic('eyeoff')}</em>`}</button><button class="icon-btn tiny solid ag-more" aria-label="Opciones" onclick="designMenu(event,'${d.id}')">${ic('more')}</button>${d.name?`<figcaption>${esc(d.name)}</figcaption>`:''}</figure>`).join('')}</div>`:`<label class="album-drop">${ic('camera')}<span><b>Sube fotos de tus uñas</b><small>Puedes elegir varias a la vez. Cada una se publica sola.</small></span><input type="file" accept="image/*" multiple hidden onchange="quickAlbum(this)"></label>`}
  </section>`;
  return `<h3 class="group-title">${ic('heart')}A la venta <span class="sub">${sale.length}</span></h3>${saleHtml}${albumHtml}`;
@@ -90,7 +91,7 @@ function designMenu(ev,id){const i=CAT.designs.findIndex(x=>x.id===id),d=CAT.des
  {label:'Mover antes',icon:'arrowup',action:()=>moveDesign(id,-1)},
  {label:'Mover después',icon:'arrowdown',action:()=>moveDesign(id,1)},
  {label:d.visible?'Ocultar de la web':'Mostrar en la web',icon:d.visible?'eyeoff':'eye',action:()=>setDesignVisible(id,!d.visible)},
- d.album?{label:'Pasar a la venta (con precio)',icon:'coin',action:()=>openDesign(id)}:null,
+ {label:d.album?'Poner a la venta':'Quitar de la venta (solo enseñar)',icon:'coin',action:()=>setDesignSale(id,!!d.album)},
  '-',{label:d.album?'Eliminar foto':'Eliminar diseño',icon:'trash2',danger:true,action:()=>deleteDesign(id)}])}
 async function moveDesign(id,dir){const cur=CAT.designs.find(x=>x.id===id);const grp=CAT.designs.filter(x=>!!x.album===!!cur.album);const gi=grp.indexOf(cur),gj=gi+dir;if(gj<0||gj>=grp.length)return;const i=CAT.designs.indexOf(cur),j=CAT.designs.indexOf(grp[gj]);const arr=CAT.designs;[arr[i],arr[j]]=[arr[j],arr[i]];arr.forEach((d,k)=>d.sort=k);render();
  const res=await Promise.all(arr.map((d,k)=>sb.from('catalog_designs').update({sort:k}).eq('id',d.id)));if(res.some(r=>r.error))toast('No se pudo guardar el orden')}
@@ -105,9 +106,9 @@ function openDesign(id=null){
  designDraft={id:d?.id||(crypto.randomUUID?crypto.randomUUID():uid('d')),isNew:!d,photos:[...(d?.photos||[])],removed:[],album:!!d?.album};
  const cats=[...new Set([...DESIGN_CATS,...CAT.designs.map(x=>x.category).filter(Boolean)])];
  openModal(`<h2 class="modal-title">${d?(d.album?'Foto del álbum':'Editar diseño'):'Nuevo diseño'}</h2>
- <div class="seg-pick" role="radiogroup" aria-label="Tipo de publicación"><button type="button" class="${designDraft.album?'':'on'}" onclick="setDraftKind(false)">${ic('heart')}<span><b>A la venta</b><small>Con nombre y precio</small></span></button><button type="button" class="${designDraft.album?'on':''}" onclick="setDraftKind(true)">${ic('photo')}<span><b>Solo álbum</b><small>Sin nombre ni precio</small></span></button></div>
+ <div class="seg-pick" role="radiogroup" aria-label="Tipo de publicación"><button type="button" class="${designDraft.album?'':'on'}" onclick="setDraftKind(false)">${ic('heart')}<span><b>A la venta</b><small>Se puede comprar</small></span></button><button type="button" class="${designDraft.album?'on':''}" onclick="setDraftKind(true)">${ic('photo')}<span><b>Solo para enseñar</b><small>Va a tu álbum</small></span></button></div>
  <div class="field"><span class="label">Fotos <small class="muted">(la primera es la portada)</small></span><div class="dz-photos" id="dzPhotos"></div></div>
- <div class="field"><label for="d_name">Nombre <small class="muted only-album">(opcional)</small></label><input id="d_name" value="${esc(d?.name||'')}" placeholder="Rosa con flor" maxlength="80"></div>
+ <div class="field"><label for="d_name">Nombre <small class="muted">(opcional)</small></label><input id="d_name" value="${esc(d?.name||'')}" placeholder="Rosa con flor" maxlength="80"></div>
  <div class="sale-only"><div class="grid-2"><div class="field"><label for="d_cat">Categoría</label><input id="d_cat" list="dCats" value="${esc(d?.category||'Press on')}" maxlength="40"><datalist id="dCats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
  <div class="field"><label for="d_price">Precio (€)</label><input id="d_price" type="number" min="0" step="0.5" value="${d?.price??''}" placeholder="Vacío = «Consultar»"></div></div>
  <label class="check-inline"><input type="checkbox" id="d_from" ${d?.price_from?'checked':''}><span>Mostrar como «desde» (el precio puede variar)</span></label>
@@ -127,8 +128,7 @@ function removeDraftPhoto(i){const p=designDraft.photos.splice(i,1)[0];if(p&&!p.
 function coverPhoto(i){const [p]=designDraft.photos.splice(i,1);designDraft.photos.unshift(p);drawDesignPhotos()}
 async function saveDesign(){
  const g=x=>document.getElementById(x);const name=g('d_name').value.trim();const album=designDraft.album;
- if(!album&&!name)return toast('Ponle un nombre al diseño (o elige «Solo álbum»)');
- if(album&&!designDraft.photos.length)return toast('Añade al menos una foto');
+ if(!name&&!designDraft.photos.length)return toast('Añade al menos una foto o ponle un nombre');
  const btn=g('dSave');btn.disabled=true;btn.textContent='Guardando…';
  try{
   const photos=[];
@@ -244,3 +244,7 @@ async function loadRefUrls(rows){
  try{const {data,error}=await sb.storage.from(REFS_BUCKET).createSignedUrls(paths,60*60*6);if(error)throw error;(data||[]).forEach(o=>{if(o.signedUrl)CAT.refUrls[o.path]=o.signedUrl});if(CAT.tab==='requests'&&location.hash.slice(1)==='catalog')safeRefresh()}catch(e){console.warn('Fotos de referencia:',e)}
 }
 function removeRefs(refs){const own=(refs||[]).filter(x=>x&&!x.startsWith('catalog:'));if(own.length)sb.storage.from(REFS_BUCKET).remove(own).catch(()=>{})}
+
+async function setDesignSale(id,onSale){const d=CAT.designs.find(x=>x.id===id);if(!d)return;
+ const {error}=await sb.from('catalog_designs').update({album:!onSale,updated_at:new Date().toISOString()}).eq('id',id);if(error)return toast(error.message);
+ d.album=!onSale;render();toast(onSale?'Ya está a la venta en tu web':'Quitado de la venta: ahora sale en tu álbum')}

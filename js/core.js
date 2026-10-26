@@ -214,6 +214,7 @@ function setSyncState(s,err=''){syncState=s;lastSyncError=err;updateSyncPill()}
 async function syncCloud(mode='smart',silent=true){
  if(!sb){if(!silent)toast('La conexión con la nube no está disponible');return}
  if(!cloudUser){if(!silent)toast('Inicia sesión en la nube primero');return}
+ if(!syncing&&!(await ensureSession()))return;
  if(syncing){syncAgain=true;return}
  syncing=true;setSyncState('busy');
  const before=contentKey(A);
@@ -253,11 +254,15 @@ async function initCloud(){
  try{const {data}=await sb.auth.getSession();cloudUser=data.session?.user||null;
   sb.auth.onAuthStateChange((event,session)=>{const was=cloudUser?.id;cloudUser=session?.user||null;
    if(event==='PASSWORD_RECOVERY')setTimeout(()=>openNewPassword(true),300);
-   if(!cloudUser)setSyncState('local');else if(was!==cloudUser.id)syncCloud('smart',true);
+   if(!cloudUser){setSyncState('local');if(was&&event!=='SIGNED_OUT_BY_APP')sessionGone()}else if(was!==cloudUser.id)syncCloud('smart',true);
    updateSyncPill()});
  }catch(e){console.warn('Sesión de nube no disponible',e)}
  setSyncState(cloudUser?'busy':'local');
 }
+// La sesión ha caducado o se cerró en otro sitio: volver a la pantalla de entrada en vez de seguir sin permisos
+let sessionGoneShown=false;
+function sessionGone(){cloudUser=null;setSyncState('local');if(typeof closeModal==='function')try{closeModal()}catch{}if(!sessionGoneShown){sessionGoneShown=true;setTimeout(()=>sessionGoneShown=false,4000);toast('Tu sesión ha caducado. Vuelve a entrar para guardar los cambios.',5000)}render()}
+async function ensureSession(){if(!sb)return false;try{const {data}=await sb.auth.getSession();const u=data.session?.user;if(!u){if(cloudUser)sessionGone();return false}if(cloudUser&&u.id!==cloudUser.id){sessionGone();return false}cloudUser=u;return true}catch{return false}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&cloudUser)syncCloud('smart',true)});
 window.addEventListener('online',()=>{if(cloudUser)syncCloud('smart',true)});
 setInterval(()=>{if(cloudUser&&document.visibilityState==='visible')syncCloud('smart',true)},120000);

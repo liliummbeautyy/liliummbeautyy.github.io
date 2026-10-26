@@ -164,7 +164,7 @@ async function saveNewPassword(){
 async function cloudLogout(){if(!sb||!cloudUser)return;if(!await ask({title:'¿Cerrar sesión?',text:'Por seguridad se borrará la copia de este dispositivo. Todo sigue guardado en tu cuenta y vuelve al iniciar sesión.',ok:'Cerrar sesión'}))return;
  await syncCloud('smart',true);
  if(syncState!=='ok'&&!await ask({title:'No se pudo guardar lo último en la nube',text:'Si cierras sesión ahora podrías perder los cambios más recientes de este dispositivo.',ok:'Cerrar igualmente',danger:true}))return;
- try{await sb.auth.signOut()}catch{}cloudUser=null;wipeLocal();location.hash='home';location.reload()}
+ try{await sb.auth.signOut({scope:'local'})}catch{}cloudUser=null;wipeLocal();location.hash='home';location.reload()}
 
 /* Datos */
 function exportData(){const stamp=new Date().toLocaleString('es-ES');A.settings.lastBackup=stamp;save();const payload={app:'manicure',version:APP_VERSION,createdAt:new Date().toISOString(),clients:A.clients,services:A.services,appointments:A.appointments,expenses:A.expenses,tasks:A.tasks,settings:{...A.settings,pinHash:'',pin:undefined},trash:A.trash};const blob=new Blob([JSON.stringify(payload,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`manicure-copia-${todayKey()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);render();toast('Copia descargada')}
@@ -214,4 +214,4 @@ function bootApp(){
  }catch(err){console.error('Error al iniciar:',err);document.getElementById('app').innerHTML=`<div class="crash"><h1>No se ha podido abrir la aplicación</h1><p>Recarga la página. Tus datos siguen guardados.</p><details><summary>Detalles técnicos</summary><pre>${esc(err?.stack||err?.message||String(err))}</pre></details></div>`}
 }
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-initCloud().then(async()=>{if(cloudUser&&lsGet('lilium_forget')==='1'&&ssGet('lilium_alive')!=='1'){try{await sb.auth.signOut()}catch{}cloudUser=null;wipeLocal();location.reload();return}markOwner()}).finally(()=>{bootApp();if(cloudUser){syncCloud('smart',true);loadCatalog()}});
+initCloud().then(async()=>{if(cloudUser&&lsGet('lilium_forget')==='1'&&ssGet('lilium_alive')!=='1'){try{await sb.auth.signOut({scope:'local'})}catch{}cloudUser=null;wipeLocal();location.reload();return}markOwner()}).finally(()=>{bootApp();if(cloudUser){syncCloud('smart',true);loadCatalog()}});

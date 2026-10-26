@@ -64,7 +64,7 @@ function designsView(){
    <label class="toggle mini"><span>Visible en la web</span><input type="checkbox" ${d.visible?'checked':''} onchange="setDesignVisible('${d.id}',this.checked)"><i></i></label>
   </div></article>`).join('')}</div>`;
 }
-async function quickAlbum(input){
+async function quickAlbum(input){if(!(await ensureSession()))return;
  const files=[...(input.files||[])].filter(f=>f.type.startsWith('image/')).slice(0,30);input.value='';if(!files.length)return;
  let ok=0;toast(`Subiendo ${plural(files.length,'foto','fotos')}…`,60000);
  const base=-(Date.now()/1000|0);
@@ -77,16 +77,16 @@ async function quickAlbum(input){
  }
  render();toast(ok===files.length?`${plural(ok,'diseño publicado','diseños publicados')} en tu catálogo`:`Se publicaron ${ok} de ${files.length}. Revisa la conexión e inténtalo con las que faltan.`,4000);
 }
-async function setDesignVisible(id,v){const d=CAT.designs.find(x=>x.id===id);const {error}=await sb.from('catalog_designs').update({visible:v}).eq('id',id);if(error)return toast(error.message);d.visible=v;render();toast(v?'Ahora se ve en tu web':'Oculto de la web')}
+async function setDesignVisible(id,v){if(!(await ensureSession()))return;const d=CAT.designs.find(x=>x.id===id);const {error}=await sb.from('catalog_designs').update({visible:v}).eq('id',id);if(error)return toast(error.message);d.visible=v;render();toast(v?'Ahora se ve en tu web':'Oculto de la web')}
 function designMenu(ev,id){const i=CAT.designs.findIndex(x=>x.id===id),d=CAT.designs[i];openMenu(ev,[
  {label:'Editar',icon:'edit',action:()=>openDesign(id)},
  {label:'Mover antes',icon:'arrowup',action:()=>moveDesign(id,-1)},
  {label:'Mover después',icon:'arrowdown',action:()=>moveDesign(id,1)},
  {label:d.visible?'Ocultar de la web':'Mostrar en la web',icon:d.visible?'eyeoff':'eye',action:()=>setDesignVisible(id,!d.visible)},
   '-',{label:d.album?'Eliminar foto':'Eliminar diseño',icon:'trash2',danger:true,action:()=>deleteDesign(id)}])}
-async function moveDesign(id,dir){const cur=CAT.designs.find(x=>x.id===id);const grp=CAT.designs;const gi=grp.indexOf(cur),gj=gi+dir;if(gj<0||gj>=grp.length)return;const i=CAT.designs.indexOf(cur),j=CAT.designs.indexOf(grp[gj]);const arr=CAT.designs;[arr[i],arr[j]]=[arr[j],arr[i]];arr.forEach((d,k)=>d.sort=k);render();
+async function moveDesign(id,dir){if(!(await ensureSession()))return;const cur=CAT.designs.find(x=>x.id===id);const grp=CAT.designs;const gi=grp.indexOf(cur),gj=gi+dir;if(gj<0||gj>=grp.length)return;const i=CAT.designs.indexOf(cur),j=CAT.designs.indexOf(grp[gj]);const arr=CAT.designs;[arr[i],arr[j]]=[arr[j],arr[i]];arr.forEach((d,k)=>d.sort=k);render();
  const res=await Promise.all(arr.map((d,k)=>sb.from('catalog_designs').update({sort:k}).eq('id',d.id)));if(res.some(r=>r.error))toast('No se pudo guardar el orden')}
-async function deleteDesign(id){const d=CAT.designs.find(x=>x.id===id);if(!d)return;if(!await ask({title:d.name?`¿Eliminar «${d.name}»?`:'¿Eliminar este diseño?',text:'Se quitará de tu web y se borrarán sus fotos. No se puede deshacer.',ok:'Eliminar',danger:true}))return;
+async function deleteDesign(id){if(!(await ensureSession()))return;const d=CAT.designs.find(x=>x.id===id);if(!d)return;if(!await ask({title:d.name?`¿Eliminar «${d.name}»?`:'¿Eliminar este diseño?',text:'Se quitará de tu web y se borrarán sus fotos. No se puede deshacer.',ok:'Eliminar',danger:true}))return;
  const {error}=await sb.from('catalog_designs').delete().eq('id',id);if(error)return toast(error.message);
  if(d.photos?.length)sb.storage.from(CATALOG_BUCKET).remove(d.photos.filter(p=>!/^https?:/.test(p))).catch(()=>{});
  CAT.designs=CAT.designs.filter(x=>x.id!==id);closeModal();render();toast('Diseño eliminado')}
@@ -114,7 +114,7 @@ function drawDesignPhotos(){const box=document.getElementById('dzPhotos');if(!bo
 async function addDraftPhotos(input){const files=[...(input.files||[])].filter(f=>f.type.startsWith('image/')).slice(0,6-designDraft.photos.length);for(const f of files)designDraft.photos.push(await compressImage(f,1400,.85));drawDesignPhotos()}
 function removeDraftPhoto(i){const p=designDraft.photos.splice(i,1)[0];if(p&&!p.startsWith('data:'))designDraft.removed.push(p);drawDesignPhotos()}
 function coverPhoto(i){const [p]=designDraft.photos.splice(i,1);designDraft.photos.unshift(p);drawDesignPhotos()}
-async function saveDesign(){
+async function saveDesign(){if(!(await ensureSession()))return;
  const g=x=>document.getElementById(x);const name=g('d_name').value.trim(); if(!name&&!designDraft.photos.length)return toast('Añade al menos una foto o ponle un nombre');
  const btn=g('dSave');btn.disabled=true;btn.textContent='Guardando…';
  try{
@@ -133,7 +133,7 @@ async function saveDesign(){
   if(designDraft.removed.length)sb.storage.from(CATALOG_BUCKET).remove(designDraft.removed).catch(()=>{});
   const i=CAT.designs.findIndex(x=>x.id===res.data.id);if(i>=0)CAT.designs[i]=res.data;else CAT.designs.unshift(res.data);
   closeModal();render();toast(designDraft.isNew?'Diseño publicado en tu web':'Guardado');
- }catch(e){btn.disabled=false;btn.textContent='Guardar';toast('No se pudo guardar: '+(e?.message||'revisa la conexión'),4000)}
+ }catch(e){btn.disabled=false;btn.textContent='Guardar';toast(e?.code==='PGRST116'?'No se pudo guardar: tu sesión ha caducado. Vuelve a entrar.':'No se pudo guardar: '+(e?.message||'revisa la conexión'),4000);if(e?.code==='PGRST116')sessionGone()}
 }
 
 /* Pedidos y mensajes */
@@ -164,8 +164,8 @@ function requestCard(r){
   <footer class="req-actions">${contacts}<span class="grow"></span><button class="btn ghost small" onclick="requestToClient('${r.id}')">${ic('userplus')}Crear ficha</button><button class="icon-btn" aria-label="Más opciones" onclick="openMenu(event,[{label:'Archivar',icon:'folder',action:()=>setRequestStatus('${r.id}','archivado')},'-',{label:'Eliminar',icon:'trash2',danger:true,action:()=>deleteRequest('${r.id}')}])">${ic('more')}</button></footer>
  </article>`;
 }
-async function setRequestStatus(id,st){const r=CAT.requests.find(x=>x.id===id);const {error}=await sb.from('catalog_requests').update({status:st}).eq('id',id);if(error)return toast(error.message);r.status=st;render();toast('Estado: '+REQ_STATUS.find(x=>x[0]===st)[1].toLowerCase())}
-async function deleteRequest(id){if(!await confirmDelete('¿Eliminar este pedido o mensaje?','No se puede deshacer.'))return;const req=CAT.requests.find(x=>x.id===id);const {error}=await sb.from('catalog_requests').delete().eq('id',id);if(error)return toast(error.message);removeRefs(req?.refs);CAT.requests=CAT.requests.filter(x=>x.id!==id);render();toast('Eliminado')}
+async function setRequestStatus(id,st){if(!(await ensureSession()))return;const r=CAT.requests.find(x=>x.id===id);const {error}=await sb.from('catalog_requests').update({status:st}).eq('id',id);if(error)return toast(error.message);r.status=st;render();toast('Estado: '+REQ_STATUS.find(x=>x[0]===st)[1].toLowerCase())}
+async function deleteRequest(id){if(!(await ensureSession()))return;if(!await confirmDelete('¿Eliminar este pedido o mensaje?','No se puede deshacer.'))return;const req=CAT.requests.find(x=>x.id===id);const {error}=await sb.from('catalog_requests').delete().eq('id',id);if(error)return toast(error.message);removeRefs(req?.refs);CAT.requests=CAT.requests.filter(x=>x.id!==id);render();toast('Eliminado')}
 function requestToClient(id){
  const r=CAT.requests.find(x=>x.id===id);if(!r)return;
  let c=A.clients.find(x=>(r.phone&&String(x.phone).replace(/\D/g,'').endsWith(r.phone.replace(/\D/g,'').slice(-9)))||norm(x.name)===norm(r.name));
@@ -196,7 +196,7 @@ function profileView(){
   ${!p.legal_name||!p.legal_id?`<p class="warn-note">${ic('info')}Rellénalos para que tu web cumpla la ley.</p>`:''}
   <button class="btn soft wide" onclick="saveCatalogProfile()">${ic('save')}Guardar datos</button>`,{sub:'Obligatorios por ley en una web que vende.'})}</div>`;
 }
-async function saveCatalogProfile(){
+async function saveCatalogProfile(){if(!(await ensureSession()))return;
  const g=k=>document.getElementById('cp_'+k);const row={};['business','tagline','about','city','whatsapp','instagram','tiktok','email','legal_name','legal_id','legal_address'].forEach(k=>row[k]=g(k).value.trim());row.open=g('open').checked;row.updated_at=new Date().toISOString();
  const url=g('url').value.trim();if(url&&url!==catalogUrl()){A.settings.catalogUrl=url;save()}
  if(row.email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(row.email))return toast('Revisa el email');

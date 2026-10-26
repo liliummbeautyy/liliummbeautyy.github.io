@@ -1,4 +1,4 @@
-/* Lilium · catálogo público: diseños, precios, pedidos y mensajes (gestión) */
+/* Lilium · catálogo público: diseños y mensajes (gestión) */
 const CATALOG_BUCKET='catalog';
 const CATALOG_URL_DEFAULT='https://liliummbeautyy.github.io/catalogo/';
 const REQ_STATUS=[['nuevo','Nuevo'],['en_proceso','En proceso'],['aceptado','Aceptado'],['hecho','Hecho'],['archivado','Archivado']];
@@ -42,13 +42,13 @@ setInterval(()=>{if(cloudUser&&document.visibilityState==='visible')loadCatalog(
 
 /* Página */
 function catalogPage(){
- const head=pageHead('Catálogo','Tus diseños, precios y lo que te piden desde la web',['flores','lirios']);
+ const head=pageHead('Catálogo','Tus diseños y lo que te escriben desde la web',['flores','lirios']);
  if(!sb)return {head,body:card('','',`<p class="muted pad">El catálogo necesita conexión a Internet.</p>`)};
  if(!cloudUser)return {head,body:card('Conecta tu cuenta','cloud',`<p class="muted">El catálogo se publica en Internet, así que necesita la nube. Inicia sesión para gestionarlo.</p><button class="btn" onclick="openCloudLogin()">${ic('cloud')}Iniciar sesión</button>`)};
  if(!CAT.loaded){loadCatalog();return {head,body:card('','',`<p class="muted pad">${CAT.error?esc(CAT.error):'Cargando tu catálogo…'}</p>${CAT.error?`<button class="btn soft small" onclick="loadCatalog(true)">${ic('refresh')}Reintentar</button>`:''}`)}}
  const n=catalogNewCount();
- const tabs=`<div class="toolbar"><div class="segtabs" role="tablist">${[['designs',`Diseños y álbum <span class="cnt">${CAT.designs.length}</span>`],['requests',`Pedidos y mensajes${n?` <span class="cnt hot">${n}</span>`:''}`],['profile','Datos de contacto']].map(([k,l])=>`<button role="tab" aria-selected="${CAT.tab===k}" class="${CAT.tab===k?'on':''}" onclick="CAT.tab='${k}';render()">${l}</button>`).join('')}</div>
- <div class="head-actions"><a class="btn soft small" href="${esc(catalogUrl())}" target="_blank" rel="noopener">${ic('globe')}Ver catálogo</a><button class="btn soft small" onclick="copyCatalogLink()">${ic('send')}Copiar enlace</button>${CAT.tab==='designs'?`<label class="btn soft">${ic('photo')}Subir al álbum<input type="file" accept="image/*" multiple hidden onchange="quickAlbum(this)"></label><button class="btn" onclick="openDesign()">${ic('plus')}Nuevo diseño</button>`:''}</div></div>`;
+ const tabs=`<div class="toolbar"><div class="segtabs" role="tablist">${[['designs',`Diseños <span class="cnt">${CAT.designs.length}</span>`],['requests',`Pedidos y mensajes${n?` <span class="cnt hot">${n}</span>`:''}`],['profile','Datos de contacto']].map(([k,l])=>`<button role="tab" aria-selected="${CAT.tab===k}" class="${CAT.tab===k?'on':''}" onclick="CAT.tab='${k}';render()">${l}</button>`).join('')}</div>
+ <div class="head-actions"><a class="btn soft small" href="${esc(catalogUrl())}" target="_blank" rel="noopener">${ic('globe')}Ver catálogo</a><button class="btn soft small" onclick="copyCatalogLink()">${ic('send')}Copiar enlace</button>${CAT.tab==='designs'?`<button class="btn soft" onclick="openDesign()">${ic('plus')}Diseño con varias fotos</button><label class="btn">${ic('photo')}Subir fotos<input type="file" accept="image/*" multiple hidden onchange="quickAlbum(this)"></label>`:''}</div></div>`;
  const body=tabs+(CAT.tab==='requests'?requestsView():CAT.tab==='profile'?profileView():designsView());
  return {head,body};
 }
@@ -56,20 +56,13 @@ function copyCatalogLink(){const u=catalogUrl();(navigator.clipboard?.writeText(
 
 /* Diseños */
 function designsView(){
- const sale=CAT.designs.filter(d=>!d.album),album=CAT.designs.filter(d=>d.album);
- if(!CAT.designs.length)return card('','',`<div class="empty"><div class="empty-stamps">${stamp('lirios','',-6)}${stamp('flores','',5)}</div><p class="empty-title">Tu catálogo está vacío</p><p class="muted">Sube un diseño con su nombre y precio, o simplemente fotos de tus trabajos al álbum, sin nombre ni precio.</p><div class="empty-btns"><button class="btn" onclick="openDesign()">${ic('plus')}Nuevo diseño</button><label class="btn soft">${ic('photo')}Subir fotos al álbum<input type="file" accept="image/*" multiple hidden onchange="quickAlbum(this)"></label></div></div>`);
- const saleHtml=sale.length?`<div class="design-grid">${sale.map(d=>`<article class="design-card ${d.visible?'':'is-hidden'}">
-  <button class="dc-photo" onclick="openDesign('${d.id}')" aria-label="Editar ${esc(d.name)}">${d.photos?.[0]?`<img src="${esc(catPhotoUrl(d.photos[0]))}" alt="" loading="lazy">`:`<span class="dc-nophoto">${ic('camera')}<small>Sin foto</small></span>`}${d.photos?.length>1?`<em class="dc-count">${d.photos.length} fotos</em>`:''}${d.visible?'':`<em class="dc-hidden">${ic('eyeoff')}Oculto</em>`}</button>
+ if(!CAT.designs.length)return card('','',`<div class="empty"><div class="empty-stamps">${stamp('lirios','',-6)}${stamp('flores','',5)}</div><p class="empty-title">Tu catálogo está vacío</p><p class="muted">Sube fotos de tus diseños. Si quieres, ponles nombre o una descripción. Tus clientas los verán y, si alguno les gusta, te escribirán.</p><div class="empty-btns"><label class="btn">${ic('photo')}Subir fotos<input type="file" accept="image/*" multiple hidden onchange="quickAlbum(this)"></label><button class="btn soft" onclick="openDesign()">${ic('plus')}Diseño con varias fotos</button></div></div>`);
+ return `<div class="design-grid">${CAT.designs.map(d=>`<article class="design-card ${d.visible?'':'is-hidden'}">
+  <button class="dc-photo" onclick="openDesign('${d.id}')" aria-label="Editar ${esc(d.name||'diseño')}">${d.photos?.[0]?`<img src="${esc(catPhotoUrl(d.photos[0]))}" alt="" loading="lazy">`:`<span class="dc-nophoto">${ic('camera')}<small>Sin foto</small></span>`}${d.photos?.length>1?`<em class="dc-count">${d.photos.length} fotos</em>`:''}${d.visible?'':`<em class="dc-hidden">${ic('eyeoff')}Oculto</em>`}</button>
   <div class="dc-body"><div class="dc-title"><b class="${d.name?'':'muted'}">${esc(d.name||'Sin nombre')}</b><button class="icon-btn" aria-label="Opciones" onclick="designMenu(event,'${d.id}')">${ic('more')}</button></div>
-   <small class="muted">${esc([d.category,d.shape,d.length].filter(Boolean).join(' · ')||'Sin categoría')}</small>
-   <label class="price-edit" title="Cambia el precio y pulsa Intro"><span>${d.price_from?'Desde':'Precio'}</span><input type="number" min="0" step="0.5" inputmode="decimal" value="${d.price??''}" placeholder="—" onchange="quickPrice('${d.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()" aria-label="Precio de ${esc(d.name)}"><em>€</em></label>
-   <label class="toggle mini"><span>A la venta</span><input type="checkbox" checked onchange="setDesignSale('${d.id}',this.checked)"><i></i></label>
+   ${[d.category,d.shape,d.length].some(Boolean)?`<small class="muted">${esc([d.category,d.shape,d.length].filter(Boolean).join(' · '))}</small>`:''}
    <label class="toggle mini"><span>Visible en la web</span><input type="checkbox" ${d.visible?'checked':''} onchange="setDesignVisible('${d.id}',this.checked)"><i></i></label>
-  </div></article>`).join('')}</div>`:`<p class="muted pad">Aún no tienes diseños a la venta. Pulsa «Nuevo diseño» para añadir uno con nombre y precio.</p>`;
- const albumHtml=`<section class="album-admin card"><header class="aa-head"><div><h3>${ic('photo')}Solo para enseñar <span class="cnt">${album.length}</span></h3><p class="muted small">Tus trabajos que no están a la venta. En la web salen en «Mi álbum» y tus clientas pueden pulsar «Quiero uno así». Ponlos a la venta cuando quieras desde ⋯.</p></div><label class="btn soft small">${ic('plus')}Subir fotos<input type="file" accept="image/*" multiple hidden onchange="quickAlbum(this)"></label></header>
-  ${album.length?`<div class="album-grid">${album.map(d=>`<figure class="${d.visible?'':'is-hidden'}"><button class="ag-photo" onclick="openDesign('${d.id}')" aria-label="Editar foto del álbum">${d.photos?.[0]?`<img src="${esc(catPhotoUrl(d.photos[0]))}" alt="" loading="lazy">`:''}${d.visible?'':`<em class="dc-hidden">${ic('eyeoff')}</em>`}</button><button class="icon-btn tiny solid ag-more" aria-label="Opciones" onclick="designMenu(event,'${d.id}')">${ic('more')}</button>${d.name?`<figcaption>${esc(d.name)}</figcaption>`:''}</figure>`).join('')}</div>`:`<label class="album-drop">${ic('camera')}<span><b>Sube fotos de tus uñas</b><small>Puedes elegir varias a la vez. Cada una se publica sola.</small></span><input type="file" accept="image/*" multiple hidden onchange="quickAlbum(this)"></label>`}
- </section>`;
- return `<h3 class="group-title">${ic('heart')}A la venta <span class="sub">${sale.length}</span></h3>${saleHtml}${albumHtml}`;
+  </div></article>`).join('')}</div>`;
 }
 async function quickAlbum(input){
  const files=[...(input.files||[])].filter(f=>f.type.startsWith('image/')).slice(0,30);input.value='';if(!files.length)return;
@@ -78,24 +71,22 @@ async function quickAlbum(input){
  for(const [k,f] of files.entries()){
   try{const id=crypto.randomUUID?crypto.randomUUID():uid('d');const data=await compressImage(f,1400,.85);const path=`${cloudUser.id}/${id}/${uid('f')}.jpg`;
    const up=await sb.storage.from(CATALOG_BUCKET).upload(path,dataUrlToBlob(data),{contentType:'image/jpeg',upsert:false});if(up.error)throw up.error;
-   const {data:row,error}=await sb.from('catalog_designs').insert({id,owner:cloudUser.id,album:true,name:'',photos:[path],visible:true,sort:base-k}).select().single();if(error)throw error;
+   const {data:row,error}=await sb.from('catalog_designs').insert({id,owner:cloudUser.id,album:false,name:'',photos:[path],visible:true,sort:base-k}).select().single();if(error)throw error;
    CAT.designs.unshift(row);ok++;
   }catch(e){console.error(e)}
  }
- render();toast(ok===files.length?`${plural(ok,'foto publicada','fotos publicadas')} en tu álbum`:`Se publicaron ${ok} de ${files.length}. Revisa la conexión e inténtalo con las que faltan.`,4000);
+ render();toast(ok===files.length?`${plural(ok,'diseño publicado','diseños publicados')} en tu catálogo`:`Se publicaron ${ok} de ${files.length}. Revisa la conexión e inténtalo con las que faltan.`,4000);
 }
-async function quickPrice(id,v){const d=CAT.designs.find(x=>x.id===id);if(!d)return;const price=v===''?null:Math.max(0,Number(v));const {error}=await sb.from('catalog_designs').update({price,updated_at:new Date().toISOString()}).eq('id',id);if(error)return toast('No se pudo guardar el precio: '+error.message);d.price=price;toast(price==null?'Precio quitado: saldrá «Consultar»':`Precio actualizado: ${money0(price)}`)}
 async function setDesignVisible(id,v){const d=CAT.designs.find(x=>x.id===id);const {error}=await sb.from('catalog_designs').update({visible:v}).eq('id',id);if(error)return toast(error.message);d.visible=v;render();toast(v?'Ahora se ve en tu web':'Oculto de la web')}
 function designMenu(ev,id){const i=CAT.designs.findIndex(x=>x.id===id),d=CAT.designs[i];openMenu(ev,[
  {label:'Editar',icon:'edit',action:()=>openDesign(id)},
  {label:'Mover antes',icon:'arrowup',action:()=>moveDesign(id,-1)},
  {label:'Mover después',icon:'arrowdown',action:()=>moveDesign(id,1)},
  {label:d.visible?'Ocultar de la web':'Mostrar en la web',icon:d.visible?'eyeoff':'eye',action:()=>setDesignVisible(id,!d.visible)},
- {label:d.album?'Poner a la venta':'Quitar de la venta (solo enseñar)',icon:'coin',action:()=>setDesignSale(id,!!d.album)},
- '-',{label:d.album?'Eliminar foto':'Eliminar diseño',icon:'trash2',danger:true,action:()=>deleteDesign(id)}])}
-async function moveDesign(id,dir){const cur=CAT.designs.find(x=>x.id===id);const grp=CAT.designs.filter(x=>!!x.album===!!cur.album);const gi=grp.indexOf(cur),gj=gi+dir;if(gj<0||gj>=grp.length)return;const i=CAT.designs.indexOf(cur),j=CAT.designs.indexOf(grp[gj]);const arr=CAT.designs;[arr[i],arr[j]]=[arr[j],arr[i]];arr.forEach((d,k)=>d.sort=k);render();
+  '-',{label:d.album?'Eliminar foto':'Eliminar diseño',icon:'trash2',danger:true,action:()=>deleteDesign(id)}])}
+async function moveDesign(id,dir){const cur=CAT.designs.find(x=>x.id===id);const grp=CAT.designs;const gi=grp.indexOf(cur),gj=gi+dir;if(gj<0||gj>=grp.length)return;const i=CAT.designs.indexOf(cur),j=CAT.designs.indexOf(grp[gj]);const arr=CAT.designs;[arr[i],arr[j]]=[arr[j],arr[i]];arr.forEach((d,k)=>d.sort=k);render();
  const res=await Promise.all(arr.map((d,k)=>sb.from('catalog_designs').update({sort:k}).eq('id',d.id)));if(res.some(r=>r.error))toast('No se pudo guardar el orden')}
-async function deleteDesign(id){const d=CAT.designs.find(x=>x.id===id);if(!d)return;if(!await ask({title:d.name?`¿Eliminar «${d.name}»?`:'¿Eliminar esta foto del álbum?',text:'Se quitará de tu web y se borrarán sus fotos. No se puede deshacer.',ok:'Eliminar',danger:true}))return;
+async function deleteDesign(id){const d=CAT.designs.find(x=>x.id===id);if(!d)return;if(!await ask({title:d.name?`¿Eliminar «${d.name}»?`:'¿Eliminar este diseño?',text:'Se quitará de tu web y se borrarán sus fotos. No se puede deshacer.',ok:'Eliminar',danger:true}))return;
  const {error}=await sb.from('catalog_designs').delete().eq('id',id);if(error)return toast(error.message);
  if(d.photos?.length)sb.storage.from(CATALOG_BUCKET).remove(d.photos.filter(p=>!/^https?:/.test(p))).catch(()=>{});
  CAT.designs=CAT.designs.filter(x=>x.id!==id);closeModal();render();toast('Diseño eliminado')}
@@ -105,19 +96,16 @@ function openDesign(id=null){
  const d=id?CAT.designs.find(x=>x.id===id):null;
  designDraft={id:d?.id||(crypto.randomUUID?crypto.randomUUID():uid('d')),isNew:!d,photos:[...(d?.photos||[])],removed:[],album:!!d?.album};
  const cats=[...new Set([...DESIGN_CATS,...CAT.designs.map(x=>x.category).filter(Boolean)])];
- openModal(`<h2 class="modal-title">${d?(d.album?'Foto del álbum':'Editar diseño'):'Nuevo diseño'}</h2>
- <div class="seg-pick" role="radiogroup" aria-label="Tipo de publicación"><button type="button" class="${designDraft.album?'':'on'}" onclick="setDraftKind(false)">${ic('heart')}<span><b>A la venta</b><small>Se puede comprar</small></span></button><button type="button" class="${designDraft.album?'on':''}" onclick="setDraftKind(true)">${ic('photo')}<span><b>Solo para enseñar</b><small>Va a tu álbum</small></span></button></div>
+ openModal(`<h2 class="modal-title">${d?'Editar diseño':'Nuevo diseño'}</h2>
  <div class="field"><span class="label">Fotos <small class="muted">(la primera es la portada)</small></span><div class="dz-photos" id="dzPhotos"></div></div>
  <div class="field"><label for="d_name">Nombre <small class="muted">(opcional)</small></label><input id="d_name" value="${esc(d?.name||'')}" placeholder="Rosa con flor" maxlength="80"></div>
- <div class="sale-only"><div class="grid-2"><div class="field"><label for="d_cat">Categoría</label><input id="d_cat" list="dCats" value="${esc(d?.category||'Press on')}" maxlength="40"><datalist id="dCats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
- <div class="field"><label for="d_price">Precio (€)</label><input id="d_price" type="number" min="0" step="0.5" value="${d?.price??''}" placeholder="Vacío = «Consultar»"></div></div>
- <label class="check-inline"><input type="checkbox" id="d_from" ${d?.price_from?'checked':''}><span>Mostrar como «desde» (el precio puede variar)</span></label>
+ <div class="field"><label for="d_cat">Estilo o categoría <small class="muted">(opcional)</small></label><input id="d_cat" list="dCats" value="${esc(d?.category||'')}" maxlength="40" placeholder="Francesa, flores, nude…"><datalist id="dCats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
  <div class="grid-2"><div class="field"><label for="d_shape">Forma</label><input id="d_shape" list="dShapes" value="${esc(d?.shape||'')}" maxlength="40" placeholder="Almond"><datalist id="dShapes">${['Almond','Coffin','Cuadrada','Redonda','Stiletto'].map(x=>`<option value="${x}">`).join('')}</datalist></div><div class="field"><label for="d_len">Largo</label><input id="d_len" value="${esc(d?.length||'')}" maxlength="20" placeholder="Medio"></div></div>
- </div>
- <div class="field"><label for="d_desc">Descripción <small class="muted only-album">(opcional)</small></label><textarea id="d_desc" rows="3" maxlength="600" placeholder="Colores, acabado, qué incluye…">${esc(d?.description||'')}</textarea></div>
- <div class="field sale-only"><label for="d_tags">Etiquetas <small class="muted">(separadas por comas)</small></label><input id="d_tags" value="${esc((d?.tags||[]).join(', '))}" placeholder="nude, flores, brillo"></div>
+ 
+ <div class="field"><label for="d_desc">Descripción <small class="muted">(opcional)</small></label><textarea id="d_desc" rows="3" maxlength="600" placeholder="Colores, acabado, técnica…">${esc(d?.description||'')}</textarea></div>
+ <div class="field"><label for="d_tags">Etiquetas <small class="muted">(separadas por comas)</small></label><input id="d_tags" value="${esc((d?.tags||[]).join(', '))}" placeholder="nude, flores, brillo"></div>
  <label class="toggle"><span><b>Visible en la web</b><small>Si lo apagas, solo lo ves tú.</small></span><input type="checkbox" id="d_visible" ${d?.visible===false?'':'checked'}><i></i></label>
- <div class="modal-actions split"><div>${d?`<button class="icon-btn danger" aria-label="Eliminar diseño" onclick="deleteDesign('${d.id}')">${ic('trash2')}</button>`:''}</div><div><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" id="dSave" onclick="saveDesign()">${d?'Guardar':'Publicar'}</button></div></div>`,{cls:'design-modal'+(designDraft.album?' is-album':'')});
+ <div class="modal-actions split"><div>${d?`<button class="icon-btn danger" aria-label="Eliminar diseño" onclick="deleteDesign('${d.id}')">${ic('trash2')}</button>`:''}</div><div><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" id="dSave" onclick="saveDesign()">${d?'Guardar':'Publicar'}</button></div></div>`,{cls:'design-modal'});
  drawDesignPhotos();
 }
 function setDraftKind(a){designDraft.album=a;const m=document.querySelector('.design-modal');m.classList.toggle('is-album',a);m.querySelectorAll('.seg-pick button').forEach((b,i)=>b.classList.toggle('on',(i===1)===a))}
@@ -127,8 +115,7 @@ async function addDraftPhotos(input){const files=[...(input.files||[])].filter(f
 function removeDraftPhoto(i){const p=designDraft.photos.splice(i,1)[0];if(p&&!p.startsWith('data:'))designDraft.removed.push(p);drawDesignPhotos()}
 function coverPhoto(i){const [p]=designDraft.photos.splice(i,1);designDraft.photos.unshift(p);drawDesignPhotos()}
 async function saveDesign(){
- const g=x=>document.getElementById(x);const name=g('d_name').value.trim();const album=designDraft.album;
- if(!name&&!designDraft.photos.length)return toast('Añade al menos una foto o ponle un nombre');
+ const g=x=>document.getElementById(x);const name=g('d_name').value.trim(); if(!name&&!designDraft.photos.length)return toast('Añade al menos una foto o ponle un nombre');
  const btn=g('dSave');btn.disabled=true;btn.textContent='Guardando…';
  try{
   const photos=[];
@@ -138,15 +125,14 @@ async function saveDesign(){
    const {error}=await sb.storage.from(CATALOG_BUCKET).upload(path,dataUrlToBlob(p),{contentType:'image/jpeg',upsert:false});
    if(error)throw error;photos.push(path);
   }
-  const pv=g('d_price').value;
-  const row={name,album,category:album?'':g('d_cat').value.trim(),price:album||pv===''?null:Math.max(0,Number(pv)),price_from:g('d_from').checked,shape:g('d_shape').value.trim(),length:g('d_len').value.trim(),description:g('d_desc').value.trim(),tags:g('d_tags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,12),visible:g('d_visible').checked,photos,updated_at:new Date().toISOString()};
+    const row={name,album:false,category:g('d_cat').value.trim(),price:null,price_from:false,shape:g('d_shape').value.trim(),length:g('d_len').value.trim(),description:g('d_desc').value.trim(),tags:g('d_tags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,12),visible:g('d_visible').checked,photos,updated_at:new Date().toISOString()};
   let res;
   if(designDraft.isNew)res=await sb.from('catalog_designs').insert({id:designDraft.id,owner:cloudUser.id,sort:-(Date.now()/1000|0),...row}).select().single();
   else res=await sb.from('catalog_designs').update(row).eq('id',designDraft.id).select().single();
   if(res.error)throw res.error;
   if(designDraft.removed.length)sb.storage.from(CATALOG_BUCKET).remove(designDraft.removed).catch(()=>{});
   const i=CAT.designs.findIndex(x=>x.id===res.data.id);if(i>=0)CAT.designs[i]=res.data;else CAT.designs.unshift(res.data);
-  closeModal();render();toast(designDraft.isNew?(album?'Foto publicada en tu álbum':'Diseño publicado en tu web'):'Guardado');
+  closeModal();render();toast(designDraft.isNew?'Diseño publicado en tu web':'Guardado');
  }catch(e){btn.disabled=false;btn.textContent='Guardar';toast('No se pudo guardar: '+(e?.message||'revisa la conexión'),4000)}
 }
 
@@ -160,15 +146,15 @@ function requestsView(){
 function requestCard(r){
  const d=r.design_id&&CAT.designs.find(x=>x.id===r.design_id);
  const when=new Date(r.created_at);
- const reply=`Hola ${r.name.split(' ')[0]} 🌸 Soy ${A.settings.ownerName||'África'}, de ${A.settings.name||'Lilium Beauty'}. ${r.kind==='pedido'?`Te escribo por tu pedido del diseño «${r.design_name}».`:r.kind==='propio'?'Te escribo por tu idea de diseño propio. ¡Me encanta!':'He recibido tu mensaje.'}`;
+ const reply=`Hola ${r.name.split(' ')[0]} 🌸 Soy ${A.settings.ownerName||'África'}, de ${A.settings.name||'Lilium Beauty'}. ${r.kind==='pedido'?`Te escribo por tu pedido del diseño «${r.design_name}».`:r.kind==='propio'?(r.design_id?`Te escribo porque te ha gustado ${r.design_name&&r.design_name!=='Diseño del catálogo'?'el diseño «'+r.design_name+'»':'uno de mis diseños'}. ¡Hablamos!`:'Te escribo por tu idea de diseño propio. ¡Me encanta!'):'He recibido tu mensaje.'}`;
  const contacts=[r.phone&&(waLink(r.phone,reply)?`<a class="btn soft small" href="${esc(waLink(r.phone,reply))}" target="_blank" rel="noopener">${ic('whatsapp')}WhatsApp</a>`:`<button class="btn soft small" onclick="badPhone(${esc(JSON.stringify(r.phone))})">${ic('whatsapp')}WhatsApp</button>`),r.instagram&&`<a class="btn soft small" href="https://instagram.com/${esc(r.instagram.replace(/^@/,''))}" target="_blank" rel="noopener">${ic('insta')}Instagram</a>`,r.email&&`<a class="btn soft small" href="mailto:${esc(r.email)}?subject=${encodeURIComponent('Lilium Beauty · '+(r.design_name||'Tu mensaje'))}&body=${encodeURIComponent(reply)}">${ic('mail')}Email</a>`].filter(Boolean).join('');
  return `<article class="card req ${r.status==='nuevo'?'is-new':''}">
   <header class="req-head">${d?.photos?.[0]?`<img class="req-thumb" src="${esc(catPhotoUrl(d.photos[0]))}" alt="">`:`<span class="req-thumb ph">${ic(r.kind==='pedido'?'heart':r.kind==='propio'?'sparkles':'message')}</span>`}
-   <div class="req-title"><span class="tag ${r.kind==='pedido'?'in':r.kind==='propio'?'own':'msg'}">${{pedido:'Pedido',propio:'Diseño propio',contacto:'Mensaje'}[r.kind]||'Mensaje'}</span>${r.status==='nuevo'?'<span class="new-dot">Nuevo</span>':''}<h3>${esc(r.name)}</h3><small class="muted">${when.toLocaleDateString('es-ES',{day:'numeric',month:'short'})}, ${when.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})} · prefiere ${esc({whatsapp:'WhatsApp',instagram:'Instagram',email:'email',llamada:'llamada'}[r.contact_pref]||r.contact_pref)}</small></div>
+   <div class="req-title"><span class="tag ${r.kind==='pedido'?'in':r.kind==='propio'?'own':'msg'}">${r.kind==='propio'?(r.design_id?'Le interesa un diseño':'Diseño propio'):{pedido:'Pedido',contacto:'Mensaje'}[r.kind]||'Mensaje'}</span>${r.status==='nuevo'?'<span class="new-dot">Nuevo</span>':''}<h3>${esc(r.name)}</h3><small class="muted">${when.toLocaleDateString('es-ES',{day:'numeric',month:'short'})}, ${when.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})} · prefiere ${esc({whatsapp:'WhatsApp',instagram:'Instagram',email:'email',llamada:'llamada'}[r.contact_pref]||r.contact_pref)}</small></div>
    <label class="mini-select"><select onchange="setRequestStatus('${r.id}',this.value)" aria-label="Estado">${REQ_STATUS.map(([v,l])=>`<option value="${v}" ${r.status===v?'selected':''}>${l}</option>`).join('')}</select></label>
   </header>
   ${r.kind==='pedido'?`<p class="req-design">${ic('heart')}<b>${esc(r.design_name||'Diseño')}</b>${r.price!=null?` · ${money0(r.price)}`:''}${r.shape?` · ${esc(r.shape)}`:''}${r.length?` · ${esc(r.length)}`:''}</p>`:''}
-  ${r.kind==='propio'&&r.design_id?`<p class="req-design">${ic('photo')}<b>Inspirado en ${esc(r.design_name||'una foto del álbum')}</b></p>`:''}
+  ${r.kind==='propio'&&r.design_id?`<p class="req-design">${ic('heart')}<b>Le interesa: ${esc(r.design_name||'un diseño del catálogo')}</b></p>`:''}
   ${r.style?`<p class="req-line"><span>Estilo</span>${esc(r.style)}</p>`:''}
   ${r.kind==='propio'&&(r.shape||r.length)?`<p class="req-line"><span>Forma</span>${esc([r.shape,r.length].filter(Boolean).join(' · '))}</p>`:''}
   ${r.refs?.length?`<div class="req-refs">${r.refs.map(x=>{const u=refUrl(x);return u?`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Foto de referencia" loading="lazy"></a>`:`<span class="ref-ph">${ic('photo')}</span>`}).join('')}</div>`:''}
@@ -201,7 +187,7 @@ function profileView(){
  ${card('Cómo contactarte','phone',`
   ${f('whatsapp','WhatsApp','600 000 000','whatsapp',30)}${f('instagram','Instagram','@lilium.beauty','insta',60)}${f('tiktok','TikTok','@lilium.beauty','tiktok',60)}${f('email','Email','hola@…','mail',120)}
   <p class="hint">Solo se muestra lo que rellenes.</p>
-  <label class="toggle"><span><b>Aceptar pedidos y mensajes</b><small>Si lo apagas, el catálogo se sigue viendo pero sin formularios.</small></span><input type="checkbox" id="cp_open" ${p.open!==false?'checked':''}><i></i></label>
+  <label class="toggle"><span><b>Aceptar mensajes y encargos</b><small>Si lo apagas, el catálogo se sigue viendo pero sin formularios.</small></span><input type="checkbox" id="cp_open" ${p.open!==false?'checked':''}><i></i></label>
   <div class="field"><label for="cp_url">Dirección de tu catálogo</label><input id="cp_url" value="${esc(catalogUrl())}"></div>
   <button class="btn wide" id="cpSave" onclick="saveCatalogProfile()">${ic('save')}Guardar datos</button>`,{stamp:'avion'})}
  ${card('Datos legales','shield',`
@@ -245,6 +231,3 @@ async function loadRefUrls(rows){
 }
 function removeRefs(refs){const own=(refs||[]).filter(x=>x&&!x.startsWith('catalog:'));if(own.length)sb.storage.from(REFS_BUCKET).remove(own).catch(()=>{})}
 
-async function setDesignSale(id,onSale){const d=CAT.designs.find(x=>x.id===id);if(!d)return;
- const {error}=await sb.from('catalog_designs').update({album:!onSale,updated_at:new Date().toISOString()}).eq('id',id);if(error)return toast(error.message);
- d.album=!onSale;render();toast(onSale?'Ya está a la venta en tu web':'Quitado de la venta: ahora sale en tu álbum')}

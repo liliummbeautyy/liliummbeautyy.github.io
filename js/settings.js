@@ -189,6 +189,8 @@ async function emptyTrash(){if(!await ask({title:'¿Vaciar la papelera?',text:'L
 function showWhatsNew(){
  openModal(`<div class="news-logo">${logoHtml()}</div><h2 class="modal-title center">Novedades · versión ${APP_VERSION}</h2>
  <ul class="news">
+  <li><b>Álbum en el catálogo:</b> sube fotos de tus uñas sin nombre ni precio, varias a la vez.</li>
+  <li><b>Diseño propio:</b> tus clientas pueden pedirte un diseño a su estilo, con fotos de referencia, desde la web.</li>
   <li><b>Más seguridad:</b> sin iniciar sesión no se ve ningún dato, y al cerrar sesión se borra la copia del dispositivo.</li>
   <li><b>Protección de datos (RGPD):</b> aviso de privacidad para tus clientas, registro de su permiso, descarga y borrado definitivo de sus datos, en Ajustes › Privacidad.</li>
   <li><b>Datos legales del catálogo:</b> rellénalos en Catálogo › Datos de contacto para que tu web cumpla la ley.</li>

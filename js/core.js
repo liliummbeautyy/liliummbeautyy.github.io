@@ -1,6 +1,6 @@
 /* Lilium · Gestión de clientas — v23 · núcleo: datos, guardado y nube */
 'use strict';
-const APP_VERSION='24';
+const APP_VERSION='25';
 const STORE={clients:'manicure_clients',services:'manicure_services',appointments:'manicure_appointments',expenses:'manicure_expenses',tasks:'manicure_tasks',settings:'manicure_settings',trash:'manicure_trash'};
 const COLLS=['clients','services','appointments','expenses','tasks'];
 const K={localUpdated:'manicure_cloud_local_updated',lastSync:'manicure_cloud_last_sync',initialized:'manicure_cloud_initialized',merge:'manicure_cloud_merge_v23',whatsnew:'manicure_whatsnew_seen',unlocked:'manicure_unlocked'};

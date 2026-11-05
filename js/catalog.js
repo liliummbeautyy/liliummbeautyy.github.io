@@ -155,6 +155,7 @@ function requestCard(r){
   </header>
   ${r.kind==='pedido'?`<p class="req-design">${ic('heart')}<b>${esc(r.design_name||'Diseño')}</b>${r.price!=null?` · ${money0(r.price)}`:''}${r.shape?` · ${esc(r.shape)}`:''}${r.length?` · ${esc(r.length)}`:''}</p>`:''}
   ${r.kind==='propio'&&r.design_id?`<p class="req-design">${ic('heart')}<b>Le interesa: ${esc(r.design_name||'un diseño del catálogo')}</b></p>`:''}
+  ${r.kit?`<p class="req-line"><span>Kit</span><b class="kit-badge ${r.kit}">${r.kit==='con'?'Con kit para ponérselas':'Sin kit'}</b></p>`:''}
   ${r.style?`<p class="req-line"><span>Estilo</span>${esc(r.style)}</p>`:''}
   ${r.kind==='propio'&&(r.shape||r.length)?`<p class="req-line"><span>Forma</span>${esc([r.shape,r.length].filter(Boolean).join(' · '))}</p>`:''}
   ${r.refs?.length?`<div class="req-refs">${r.refs.map(x=>{const u=refUrl(x);return u?`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Foto de referencia" loading="lazy"></a>`:`<span class="ref-ph">${ic('photo')}</span>`}).join('')}</div>`:''}
@@ -170,7 +171,7 @@ function requestToClient(id){
  const r=CAT.requests.find(x=>x.id===id);if(!r)return;
  let c=A.clients.find(x=>(r.phone&&String(x.phone).replace(/\D/g,'').endsWith(r.phone.replace(/\D/g,'').slice(-9)))||norm(x.name)===norm(r.name));
  if(!c){c=newClient(r.name,r.phone,r.email);c.instagram=r.instagram;c.source='Catálogo web';A.clients.push(c)}
- const note=[r.kind==='pedido'?`Pedido web: ${r.design_name}${r.price!=null?' ('+money0(r.price)+')':''}`:r.kind==='propio'?`Diseño propio${r.design_id?' (inspirado en '+(r.design_name||'el álbum')+')':''}`:'Mensaje web',r.style?`Estilo: ${r.style}`:'',r.sizes?`Tallas: ${r.sizes}`:'',r.message].filter(Boolean).join(' · ');
+ const note=[r.kind==='pedido'?`Pedido web: ${r.design_name}${r.price!=null?' ('+money0(r.price)+')':''}`:r.kind==='propio'?`Diseño propio${r.design_id?' (inspirado en '+(r.design_name||'el álbum')+')':''}`:'Mensaje web',r.kit?(r.kit==='con'?'Con kit':'Sin kit'):'',r.style?`Estilo: ${r.style}`:'',r.sizes?`Tallas: ${r.sizes}`:'',r.message].filter(Boolean).join(' · ');
  c.notes.push({date:todayKey(),text:note.slice(0,500)});
  if(r.shape&&!c.shape)c.shape=r.shape;
  save();if(r.status==='nuevo')setRequestStatus(id,'en_proceso');openClientFile(c.id);toast('Ficha lista con los datos del pedido');

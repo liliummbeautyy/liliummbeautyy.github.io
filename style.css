@@ -934,3 +934,8 @@ a.btn{text-decoration:none}
 .field .dz-photos .g-add{display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0}
 .kit-badge{display:inline-block;padding:2px 10px;border-radius:999px;font-weight:600;font-size:14px;background:color-mix(in srgb,var(--accent) 16%,transparent)}
 .kit-badge.sin{background:var(--soft-2)}
+.ft-flag{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;margin:8px 0;font-size:14.5px;line-height:1.4}
+.ft-flag .ic{width:18px;height:18px;flex:none;margin-top:1px}
+.ft-flag.ok{background:var(--green-soft)}.ft-flag.ok .ic{color:var(--green)}
+.ft-flag.bad{background:color-mix(in srgb,var(--live) 14%,transparent)}.ft-flag.bad .ic{color:var(--live)}
+.ft-flag.info{background:var(--soft-2)}.ft-flag.info .ic{color:var(--accent)}

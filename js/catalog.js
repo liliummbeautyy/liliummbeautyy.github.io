@@ -155,6 +155,8 @@ function requestCard(r){
   </header>
   ${r.kind==='pedido'?`<p class="req-design">${ic('heart')}<b>${esc(r.design_name||'Diseño')}</b>${r.price!=null?` · ${money0(r.price)}`:''}${r.shape?` · ${esc(r.shape)}`:''}${r.length?` · ${esc(r.length)}`:''}</p>`:''}
   ${r.kind==='propio'&&r.design_id?`<p class="req-design">${ic('heart')}<b>Le interesa: ${esc(r.design_name||'un diseño del catálogo')}</b></p>`:''}
+  ${firstTimeBadge(r)}
+  ${r.birth||r.address?`<p class="req-line"><span>Sus datos</span>${esc([r.birth&&'🎂 '+r.birth,r.address].filter(Boolean).join(' · '))}</p>`:''}
   ${r.kit?`<p class="req-line"><span>Kit</span><b class="kit-badge ${r.kit}">${r.kit==='con'?'Con kit para ponérselas':'Sin kit'}</b></p>`:''}
   ${r.style?`<p class="req-line"><span>Estilo</span>${esc(r.style)}</p>`:''}
   ${r.kind==='propio'&&(r.shape||r.length)?`<p class="req-line"><span>Forma</span>${esc([r.shape,r.length].filter(Boolean).join(' · '))}</p>`:''}
@@ -162,16 +164,17 @@ function requestCard(r){
   ${r.sizes?`<p class="req-line"><span>Tallas</span>${esc(r.sizes)}</p>`:''}
   ${r.message?`<p class="req-msg">${esc(r.message)}</p>`:''}
   <div class="req-contact"><span class="muted small">${[r.phone,r.instagram,r.email].filter(Boolean).map(esc).join(' · ')}</span></div>
-  <footer class="req-actions">${contacts}<span class="grow"></span><button class="btn ghost small" onclick="requestToClient('${r.id}')">${ic('userplus')}Crear ficha</button><button class="icon-btn" aria-label="Más opciones" onclick="openMenu(event,[{label:'Archivar',icon:'folder',action:()=>setRequestStatus('${r.id}','archivado')},'-',{label:'Eliminar',icon:'trash2',danger:true,action:()=>deleteRequest('${r.id}')}])">${ic('more')}</button></footer>
+  <footer class="req-actions">${contacts}<span class="grow"></span>${(()=>{const m=clientMatches(r).find(x=>x.type==='client');return m?`<button class="btn ghost small" onclick="requestToClient('${r.id}')">${ic('userplus')}Añadir a la ficha de ${esc(m.name.split(' ')[0])}</button>`:`<button class="btn small" onclick="requestToClient('${r.id}')">${ic('userplus')}Crear su ficha</button>`})()}<button class="icon-btn" aria-label="Más opciones" onclick="openMenu(event,[{label:'Archivar',icon:'folder',action:()=>setRequestStatus('${r.id}','archivado')},'-',{label:'Eliminar',icon:'trash2',danger:true,action:()=>deleteRequest('${r.id}')}])">${ic('more')}</button></footer>
  </article>`;
 }
 async function setRequestStatus(id,st){if(!(await ensureSession()))return;const r=CAT.requests.find(x=>x.id===id);const {error}=await sb.from('catalog_requests').update({status:st}).eq('id',id);if(error)return toast(error.message);r.status=st;render();toast('Estado: '+REQ_STATUS.find(x=>x[0]===st)[1].toLowerCase())}
 async function deleteRequest(id){if(!(await ensureSession()))return;if(!await confirmDelete('¿Eliminar este pedido o mensaje?','No se puede deshacer.'))return;const req=CAT.requests.find(x=>x.id===id);const {error}=await sb.from('catalog_requests').delete().eq('id',id);if(error)return toast(error.message);removeRefs(req?.refs);CAT.requests=CAT.requests.filter(x=>x.id!==id);render();toast('Eliminado')}
 function requestToClient(id){
  const r=CAT.requests.find(x=>x.id===id);if(!r)return;
- let c=A.clients.find(x=>(r.phone&&String(x.phone).replace(/\D/g,'').endsWith(r.phone.replace(/\D/g,'').slice(-9)))||norm(x.name)===norm(r.name));
+ const mm=clientMatches(r).find(x=>x.type==='client');let c=mm?A.clients.find(x=>x.id===mm.id):A.clients.find(x=>norm(x.name)===norm(r.name));
  if(!c){c=newClient(r.name,r.phone,r.email);c.instagram=r.instagram;c.source='Catálogo web';A.clients.push(c)}
- const note=[r.kind==='pedido'?`Pedido web: ${r.design_name}${r.price!=null?' ('+money0(r.price)+')':''}`:r.kind==='propio'?`Diseño propio${r.design_id?' (inspirado en '+(r.design_name||'el álbum')+')':''}`:'Mensaje web',r.kit?(r.kit==='con'?'Con kit':'Sin kit'):'',r.style?`Estilo: ${r.style}`:'',r.sizes?`Tallas: ${r.sizes}`:'',r.message].filter(Boolean).join(' · ');
+ if(r.birth&&!c.birth)c.birth=r.birth;if(r.address&&!c.address)c.address=r.address;if(r.instagram&&!c.instagram)c.instagram=r.instagram;if(r.email&&!c.email)c.email=r.email;
+ const note=[r.first_time?(clientMatches(r).length?'Dijo que era su primera vez (ya constaba como clienta)':'Primera vez (detalle de bienvenida)'):'',r.kind==='pedido'?`Pedido web: ${r.design_name}${r.price!=null?' ('+money0(r.price)+')':''}`:r.kind==='propio'?`Diseño propio${r.design_id?' (inspirado en '+(r.design_name||'el álbum')+')':''}`:'Mensaje web',r.kit?(r.kit==='con'?'Con kit':'Sin kit'):'',r.style?`Estilo: ${r.style}`:'',r.sizes?`Tallas: ${r.sizes}`:'',r.message].filter(Boolean).join(' · ');
  c.notes.push({date:todayKey(),text:note.slice(0,500)});
  if(r.shape&&!c.shape)c.shape=r.shape;
  save();if(r.status==='nuevo')setRequestStatus(id,'en_proceso');openClientFile(c.id);toast('Ficha lista con los datos del pedido');
@@ -232,3 +235,21 @@ async function loadRefUrls(rows){
 }
 function removeRefs(refs){const own=(refs||[]).filter(x=>x&&!x.startsWith('catalog:'));if(own.length)sb.storage.from(REFS_BUCKET).remove(own).catch(()=>{})}
 
+
+/* Primera vez: comprobar si ya es clienta o ya pidió antes, por teléfono, Instagram o email */
+const digits9=x=>String(x||'').replace(/\D/g,'').slice(-9);
+const igNorm=x=>String(x||'').toLowerCase().replace(/^@/,'').trim();
+function clientMatches(r){
+ const ph=digits9(r.phone),ig=igNorm(r.instagram),em=String(r.email||'').toLowerCase().trim();const out=[];
+ A.clients.forEach(c=>{const by=[ph.length===9&&digits9(c.phone)===ph&&'teléfono',ig&&igNorm(c.instagram)===ig&&'Instagram',em&&String(c.email||'').toLowerCase().trim()===em&&'email'].filter(Boolean);
+  if(by.length)out.push({type:'client',name:c.name,by,visits:clientAppointments(c).filter(a=>a.status==='completed').length,id:c.id})});
+ CAT.requests.forEach(o=>{if(o.id===r.id||o.created_at>=r.created_at)return;const by=[ph.length===9&&digits9(o.phone)===ph&&'teléfono',ig&&igNorm(o.instagram)===ig&&'Instagram',em&&String(o.email||'').toLowerCase().trim()===em&&'email'].filter(Boolean);
+  if(by.length)out.push({type:'req',name:o.name,by,date:o.created_at,first:o.first_time})});
+ return out;
+}
+function firstTimeBadge(r){
+ const m=clientMatches(r);
+ if(!r.first_time)return m.length?`<p class="ft-flag info">${ic('users')}<span>Ya la conoces: ${m.slice(0,2).map(x=>x.type==='client'?`ficha de <b>${esc(x.name)}</b>`:`escribió el ${fmtDate(new Date(x.date))}${norm(x.name)!==norm(r.name)?` como <b>${esc(x.name)}</b>`:''}`).join(' · ')}</span></p>`:'';
+ if(!m.length)return `<p class="ft-flag ok">${ic('check')}<span><b>Primera vez</b> · su teléfono no aparece en tus fichas ni en mensajes anteriores. Puedes darle el detalle de bienvenida.</span></p>`;
+ return `<p class="ft-flag bad">${ic('info')}<span><b>Dice que es su primera vez, pero…</b><br>${m.slice(0,3).map(x=>x.type==='client'?`su ${x.by.join(' y ')} coincide con la ficha de <b>${esc(x.name)}</b>${x.visits?` (${plural(x.visits,'servicio','servicios')})`:''}`:`ya escribió el ${fmtDate(new Date(x.date))}${norm(x.name)!==norm(r.name)?` como <b>${esc(x.name)}</b>`:''} con el mismo ${x.by.join(' y ')}${x.first?', también diciendo que era su primera vez':''}`).join('<br>')}</span></p>`;
+}
